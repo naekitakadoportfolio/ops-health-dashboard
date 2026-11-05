@@ -1,0 +1,3 @@
+{"title":"Ops Health Dashboard","brand":"OPS HEALTH","theme":"glass","storageKey":"ohdDemo","desc":"Stuck-card detection, root cause and one-click recovery",
+"nav":[["action","🚦 Action center"],["cards","🗂 All cards"],["investigator","🔎 Card investigator"],["recovery","🛠 Recovery tools"],["incidents","🚨 Incidents"],["trends","📈 Health trends"],["settings","⚙️ Diagnostics & settings"]],
+"appJs":"/home/claude/repos2/ops-health-dashboard/src/app.js"}

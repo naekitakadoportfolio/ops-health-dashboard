@@ -1,7 +1,6 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Ops Health Dashboard · Nae Kitakado</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
+<title>Ops Health Dashboard · Demo</title><meta name="description" content="Stuck-card detection, root cause and one-click recovery">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>
 :root{--bg1:#EAF4FA;--bg2:#D7EAF5;--ink:#14384E;--mauve:#4F6E80;--cocoa:#1D4C93;--sky:#89CDE7;--card:rgba(255,255,255,.62);--line:rgba(20,56,78,.14);--blush:rgba(137,205,231,.22);--rose:#89CDE7;--ok-bg:#DDF1E4;--ok:#1E5A36;--warn-bg:#FCEBC8;--warn:#7A4E12;--bad-bg:#F8D7DA;--bad:#8A2C3A}
 [data-theme=dark]{--bg1:#0B1E2A;--bg2:#14384E;--ink:#E6F2F8;--mauve:#9BB8C8;--card:rgba(20,56,78,.55);--line:rgba(137,205,231,.18);--blush:rgba(137,205,231,.12);--cocoa:#89CDE7;--ok-bg:rgba(46,160,90,.2);--ok:#8FE0AE;--warn-bg:rgba(230,160,40,.2);--warn:#F5C97A;--bad-bg:rgba(220,80,90,.2);--bad:#F5A3AC}
 *{box-sizing:border-box}body{margin:0;font-family:Inter,'Segoe UI',system-ui,sans-serif;color:var(--ink);background:linear-gradient(160deg,var(--bg1),var(--bg2));background-attachment:fixed;min-height:100vh}
@@ -26,23 +25,104 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 pre{background:#0B1E2A;color:#CFE8F4;border-radius:10px;padding:12px;font-size:12px;overflow:auto;max-height:320px}
 footer{text-align:center;font-size:12px;color:var(--mauve);margin-top:28px}a{color:var(--cocoa)}.muted{color:var(--mauve);font-size:13px}
 .hero:after{display:none}
-</style></head><body><div class="wrap"><div class="topbar"><span class="brand">OPERATIONS CONSOLE · DEMO</span><button class="ghost" id="themeBtn" style="margin:0;padding:6px 12px" onclick="(()=>{const h=document.documentElement,n=h.dataset.theme==='dark'?'light':'dark';h.dataset.theme=n;try{localStorage.setItem('demoTheme',n)}catch(e){};themeBtn.textContent=n==='dark'?'☀️ Light':'🌙 Dark'})()">🌙 Dark</button></div>
-<script>try{const s=localStorage.getItem('demoTheme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.dataset.theme=s;addEventListener('DOMContentLoaded',()=>themeBtn.textContent=s==='dark'?'☀️ Light':'🌙 Dark')}catch(e){}</script>
-<div class="hero"><span class="tag">LIVE DEMO · FICTIONAL DATA</span><h1>Ops Health Dashboard</h1><p>An operations monitor for work items that sync between two systems. It flags stuck, desynced and flapping cards, explains why, and fixes them. Click a card, simulate incidents, and try Full Auto-Fix.</p></div><div class="card" style="margin-top:20px"><h2>Operations health</h2><div class="kpi" id="kpi"></div></div>
-<div class="grid"><div class="card"><h2>Cards (live sync monitor)</h2><label>Filter</label><select id="f" onchange="draw()"><option value="all">All cards</option><option value="issue">Only issues</option></select><div id="list" style="margin-top:8px"></div><button class="ghost" onclick="autofix()">FULL AUTO-FIX ALL</button> <button class="ghost" onclick="chaos()">SIMULATE NEW INCIDENT</button></div>
-<div class="card"><h2>Card investigator</h2><div id="inv" class="muted">Select a card to investigate.</div></div></div>
+</style><style>
+.shell{display:grid;grid-template-columns:220px 1fr;gap:16px;margin-top:4px}@media(max-width:820px){.shell{grid-template-columns:1fr}}
+.side{background:var(--card);backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:16px;padding:14px;height:fit-content;position:sticky;top:12px}
+.side a{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border-radius:10px;color:var(--ink);text-decoration:none;font-weight:500;margin:2px 0}
+.side a.on{background:var(--cocoa);color:#fff}.side a:hover:not(.on){background:var(--blush)}
+.badge{background:#C0392B;color:#fff;border-radius:99px;font-size:11px;padding:1px 7px}
+.who{border-top:1px solid var(--line);margin-top:12px;padding-top:12px}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.cal .h{font-size:11px;font-weight:700;color:var(--mauve);text-align:center;letter-spacing:.08em}
+.day{min-height:92px;border:1px solid var(--line);border-radius:10px;padding:6px;background:rgba(255,255,255,.35);cursor:pointer;font-size:12px;overflow:hidden}
+[data-theme=dark] .day{background:rgba(255,255,255,.04)}.day:hover{outline:2px solid var(--sky)}.day.off{opacity:.4}.day.we{background:var(--blush)}.day.today{outline:2px solid var(--cocoa)}.day.sel{background:rgba(29,76,147,.18)}
+.ev{border-radius:5px;padding:1px 5px;margin-top:3px;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff}
+.Vacation{background:#1D4C93}.Sick{background:#C27C0E}.Personal{background:#2E8B57}.Protected{background:#6B7A86}.Holiday{background:#89CDE7;color:#14384E}.pending{opacity:.6;border:1px dashed #fff}
+.toast{position:fixed;right:18px;bottom:18px;background:var(--cocoa);color:#fff;padding:12px 16px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.2);opacity:0;transform:translateY(10px);transition:.25s;z-index:9;max-width:340px}.toast.show{opacity:1;transform:none}
+.modal{position:fixed;inset:0;background:rgba(10,30,45,.45);display:none;align-items:center;justify-content:center;z-index:8;padding:16px}.modal.show{display:flex}.modal .card{max-width:480px;width:100%;background:var(--bg1)}
+.row{display:flex;gap:10px}.row>*{flex:1}.legend span{margin-right:10px;font-size:12px}.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:middle}
+.bar{background:var(--blush);border-radius:99px;height:8px;margin-top:4px}.bar div{height:8px;border-radius:99px;background:var(--cocoa)}
+</style><style></style></head><body><div class="wrap">
+<div class="topbar"><span class="brand">OPS HEALTH · DEMO</span><span><button class="ghost" style="margin:0;padding:6px 12px" onclick="resetAll()">↺ Reset demo data</button> <button class="ghost" id="themeBtn" style="margin:0;padding:6px 12px" onclick="toggleTheme()">🌙 Dark</button></span></div>
+<div class="shell"><nav class="side"><a href="#/action" data-r="action">🚦 Action center <span class="badge" data-b="action"></span></a>
+<a href="#/cards" data-r="cards">🗂 All cards <span class="badge" data-b="cards"></span></a>
+<a href="#/investigator" data-r="investigator">🔎 Card investigator <span class="badge" data-b="investigator"></span></a>
+<a href="#/recovery" data-r="recovery">🛠 Recovery tools <span class="badge" data-b="recovery"></span></a>
+<a href="#/incidents" data-r="incidents">🚨 Incidents <span class="badge" data-b="incidents"></span></a>
+<a href="#/trends" data-r="trends">📈 Health trends <span class="badge" data-b="trends"></span></a>
+<a href="#/settings" data-r="settings">⚙️ Diagnostics & settings <span class="badge" data-b="settings"></span></a></nav><main id="view"></main></div>
+<div class="modal" id="modal" onclick="if(event.target==this)closeM()"><div class="card" id="mbody"></div></div><div class="toast" id="toast"></div>
+<footer>Portfolio rebuild by <b>Nae Kitakado</b>, AI Automation Consultant · <a href="https://github.com/naekitakadoportfolio/ops-health-dashboard">Source</a> · <a href="https://www.linkedin.com/in/nae-k-203194265">LinkedIn</a><br>All data is fictional. Changes are saved in your browser only.</footer></div>
 <script>
-const $=i=>document.getElementById(i);const now=Date.now(),h=36e5;
-let C=[{id:"CID-2201",name:"Fall launch · 15s",status:"transferring",ext:"pending",since:now-30*h,subs:3,subsOk:3,flips:0},{id:"CID-2202",name:"Webinar promo",status:"qa review",ext:"qa review",since:now-2*h,subs:2,subsOk:2,flips:0},{id:"CID-2203",name:"Founder story",status:"approved",ext:"approved",since:now-5*h,subs:4,subsOk:2,flips:0},{id:"CID-2204",name:"UGC compilation",status:"live",ext:"live",since:now-50*h,subs:2,subsOk:2,flips:5},{id:"CID-2205",name:"Retargeting set",status:"approved",ext:"live",since:now-4*h,subs:1,subsOk:1,flips:0}];
-function diag(c){const d=[];if(c.status=="transferring"&&(now-c.since)>24*h)d.push(["Stuck in transfer >24h","Push to downstream platform"]);if(c.subsOk<c.subs)d.push([`Subtask desync (${c.subs-c.subsOk}/${c.subs} out of sync)`,"Sync subtasks"]);if(c.flips>=4)d.push([`Status flapping (${c.flips} changes/hr)`,"Pause automations & lock status"]);if(c.status!=c.ext&&c.status!="transferring")d.push([`Mismatch: ours "${c.status}" vs platform "${c.ext}"`,"Reconcile to platform status"]);return d}
-function fix(i){const c=C[i];if(c.status=="transferring"){c.status="live";c.ext="live"}c.subsOk=c.subs;c.flips=0;if(c.status!=c.ext)c.status=c.ext;c.since=Date.now();draw();inv(i)}
-function autofix(){C.forEach((c,i)=>diag(c).length&&fix(i));$("inv").innerHTML="<span class='pill low'>All issues resolved</span><p class='muted'>Validate → Preview → Apply ran on every flagged card.</p>"}
-function chaos(){const c=C[Math.floor(Math.random()*C.length)];[()=>c.subsOk=Math.max(0,c.subs-2),()=>c.flips=6,()=>{c.status="transferring";c.since=now-40*h}][Math.floor(Math.random()*3)]();draw()}
-function inv(i){const c=C[i],d=diag(c);$("inv").innerHTML=`<p><b>${c.id}</b> ${c.name}</p><table><tr><th>Our status</th><td>${c.status}</td></tr><tr><th>Platform status</th><td>${c.ext}</td></tr><tr><th>In status for</th><td>${Math.round((Date.now()-c.since)/h)}h</td></tr><tr><th>Subtasks in sync</th><td>${c.subsOk}/${c.subs}</td></tr></table>
- <h2 style="margin-top:12px">Root cause</h2>${d.length?"<ul>"+d.map(x=>`<li>${x[0]} → <b>${x[1]}</b></li>`).join("")+"</ul><button onclick='fix("+i+")'>APPLY FIX</button>":"<span class='pill low'>Healthy</span>"}`}
-function draw(){const iss=C.filter(c=>diag(c).length).length,score=Math.round((1-iss/C.length)*100);
- $("kpi").innerHTML=`<div><b>${score}%</b>health score</div><div><b>${C.length}</b>cards monitored</div><div><b>${iss}</b>need attention</div><div><b>${C.filter(c=>c.status=='transferring'&&(now-c.since)>24*h).length}</b>stuck >24h</div>`;
- $("list").innerHTML=C.map((c,i)=>({c,i,d:diag(c)})).filter(x=>$("f").value=="all"||x.d.length).map(({c,i,d})=>`<div onclick="inv(${i})" style="cursor:pointer;border-bottom:1px solid var(--line);padding:8px 0"><b>${c.id}</b> ${c.name} <span class="pill ${d.length?'high':'low'}">${d.length?d.length+' issue(s)':'healthy'}</span><br><span class="muted">${c.status}</span></div>`).join("")}
-draw();inv(0);
-</script>
-<footer>Built by <b>Nae Kitakado</b>, AI Automation Consultant · <a href="https://github.com/naekitakadoportfolio">GitHub</a> · <a href="https://www.linkedin.com/in/nae-k-203194265">LinkedIn</a> · <a href="https://sider.ai/agents/web-creator/share/695ea81100a621619985fdfb">Portfolio</a><br>All data is fictional. This demo runs entirely in your browser.</footer></div></body></html>
+const H=36e5;
+function SEED(){const now=Date.now();const C=(id,name,team,status,ext,hrs,subs,ok,flips)=>({id,name,team,status,ext,since:now-hrs*H,subs,subsOk:ok,flips,notes:[]});
+ return{user:"Coordinator",cfg:{stuckH:24,flipN:4,autoHeal:false},
+ cards:[C("CID-2201","Fall launch · 15s","North","transferring","pending",30,3,3,0),C("CID-2202","Webinar promo","South","qa review","qa review",2,2,2,0),C("CID-2203","Founder story","East","approved","approved",5,4,2,0),C("CID-2204","UGC compilation","West","live","live",50,2,2,5),C("CID-2205","Retargeting set","North","approved","live",4,1,1,0),
+  C("CID-2206","Holiday bundle","South","transferring","pending",41,2,1,0),C("CID-2207","Testimonial cut","East","live","live",3,3,3,0),C("CID-2208","Hook test A/B","West","qa review","approved",7,2,2,1)],
+ incidents:[{id:1,t:now-3*864e5,title:"Webhook token tied to offboarded user",sev:"high",cause:"Platform API check failed with 401 after a reviewer left",fix:"Moved validation to a service account",status:"resolved"},{id:2,t:now-864e5,title:"Duplicate-send guard silently skipped cards",sev:"medium",cause:"Guard keyed on name, not ID",fix:"Keyed guard on card ID",status:"resolved"}],
+ trend:[62,70,68,75,81,78,86,90,84,88,92,87,91,94],log:[]}}
+const P=(c,t)=>`<span class="pill ${c}">${t}</span>`;
+function diag(c){const d=[],age=(Date.now()-c.since)/H;if(c.status=="transferring"&&age>S.cfg.stuckH)d.push({k:"stuck",t:`Stuck in transfer ${Math.round(age)}h (> ${S.cfg.stuckH}h)`,fix:"Push to ad platform",sev:"high"});
+ if(c.subsOk<c.subs)d.push({k:"desync",t:`Subtask desync (${c.subs-c.subsOk}/${c.subs})`,fix:"Sync subtasks",sev:"medium"});
+ if(c.flips>=S.cfg.flipN)d.push({k:"flap",t:`Status flapping (${c.flips}/hr)`,fix:"Lock status & pause automations",sev:"high"});
+ if(c.status!=c.ext&&c.status!="transferring")d.push({k:"mismatch",t:`Mismatch: "${c.status}" vs platform "${c.ext}"`,fix:"Reconcile to platform",sev:"medium"});return d}
+function plan(c){const p={...c};diag(c).forEach(x=>{if(x.k=="stuck"){p.status="live";p.ext="live"}if(x.k=="desync")p.subsOk=p.subs;if(x.k=="flap")p.flips=0;if(x.k=="mismatch")p.status=p.ext});return p}
+function applyFix(id,quiet){const c=S.cards.find(x=>x.id==id),d=diag(c);if(!d.length)return 0;Object.assign(c,plan(c),{since:Date.now()});c.notes.unshift(`${new Date().toLocaleTimeString()} · fixed: ${d.map(x=>x.fix).join(", ")}`);L(`🛠 ${id}: ${d.map(x=>x.fix).join(", ")} (${S.user})`);if(!quiet)toast("✅ Fix applied to "+id);return d.length}
+function score(){const n=S.cards.filter(c=>diag(c).length).length;return Math.round((1-n/S.cards.length)*100)}
+function snap(){S.trend.push(score());if(S.trend.length>30)S.trend.shift()}
+const V={};
+V.action=()=>{const iss=S.cards.map(c=>({c,d:diag(c)})).filter(x=>x.d.length).sort((a,b)=>b.d.filter(x=>x.sev=="high").length-a.d.filter(x=>x.sev=="high").length);
+return`<div class="hero"><span class="tag">ACTION CENTER</span><h1>Operations health: ${score()}%</h1><p>${iss.length} card(s) need attention. Highest severity first.</p></div>
+<div class="card" style="margin-top:16px"><div class="kpi"><div><b>${S.cards.length}</b>cards monitored</div><div><b>${iss.length}</b>need attention</div><div><b>${S.cards.filter(c=>diag(c).some(d=>d.k=="stuck")).length}</b>stuck</div><div><b>${S.cards.filter(c=>diag(c).some(d=>d.k=="desync")).length}</b>desynced</div><div><b>${S.incidents.filter(i=>i.status=="open").length}</b>open incidents</div></div></div>
+<div class="card" style="margin-top:16px"><h2>Priority queue</h2>${iss.map(({c,d})=>`<div style="border-bottom:1px solid var(--line);padding:8px 0;display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap"><span><b>${c.id}</b> ${esc(c.name)} ${d.map(x=>P(x.sev,x.t)).join("")}</span><span><button class="ghost" style="margin:0;padding:5px 12px" onclick="investigate('${c.id}')">Investigate</button> <button style="margin:0;padding:5px 12px" onclick="applyFix('${c.id}');snap();route()">Fix</button></span></div>`).join("")||"<p class='muted'>🎉 All clear.</p>"}
+<button class="ghost" onclick="simulate()">⚡ Simulate new incident</button></div>`};
+function simulate(){const c=S.cards[Math.floor(Math.random()*S.cards.length)];[()=>c.subsOk=Math.max(0,c.subs-1),()=>c.flips=6,()=>{c.status="transferring";c.ext="pending";c.since=Date.now()-40*H},()=>c.ext="paused"][Math.floor(Math.random()*4)]();L(`⚡ Incident simulated on ${c.id}`);snap();toast("New issue on "+c.id);if(S.cfg.autoHeal){applyFix(c.id,true);toast("🤖 Autopilot healed "+c.id)}route()}
+V.cards=()=>{const f=S.f||{q:"",team:"",only:""};const rows=S.cards.filter(c=>(!f.q||(c.id+c.name).toLowerCase().includes(f.q.toLowerCase()))&&(!f.team||c.team==f.team)&&(!f.only||diag(c).length));
+return`<div class="card"><h2>All cards</h2><div class="row"><input placeholder="Search ID or name" value="${esc(f.q)}" oninput="S.f={...(S.f||{}),q:this.value};clearTimeout(window._q);window._q=setTimeout(route,300)"><select onchange="S.f={...(S.f||{}),team:this.value};route()"><option value="">All teams</option>${[...new Set(S.cards.map(c=>c.team))].map(t=>`<option ${f.team==t?"selected":""}>${t}</option>`).join("")}</select><select onchange="S.f={...(S.f||{}),only:this.value};route()"><option value="">All statuses</option><option value="1" ${f.only?"selected":""}>Only issues</option></select></div>
+<table style="margin-top:10px"><tr><th>ID</th><th>Name</th><th>Team</th><th>Ours</th><th>Platform</th><th>Age</th><th>Subtasks</th><th>Health</th></tr>${rows.map(c=>{const d=diag(c);return`<tr style="cursor:pointer" onclick="investigate('${c.id}')"><td><b>${c.id}</b></td><td>${esc(c.name)}</td><td>${c.team}</td><td>${c.status}</td><td>${c.ext}</td><td>${Math.round((Date.now()-c.since)/H)}h</td><td>${c.subsOk}/${c.subs}</td><td>${d.length?P(d.some(x=>x.sev=="high")?"high":"medium",d.length+" issue(s)"):P("low","healthy")}</td></tr>`}).join("")}</table>${rows.length?"":"<p class='muted'>No cards match.</p>"}</div>`};
+function investigate(id){S.sel=id;go("investigator")}
+V.investigator=()=>{const c=S.cards.find(x=>x.id==S.sel)||S.cards[0];S.sel=c.id;const d=diag(c),p=plan(c);
+return`<div class="card"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><h2 style="margin:0">Card investigator</h2><select style="width:auto" onchange="S.sel=this.value;route()">${S.cards.map(x=>`<option ${x.id==c.id?"selected":""}>${x.id}</option>`).join("")}</select></div>
+<h1 style="font-size:24px">${c.id} · ${esc(c.name)}</h1><div class="grid" style="margin-top:0"><div><table><tr><th></th><th>Project tool</th><th>Ad platform</th></tr><tr><td>Status</td><td>${c.status}</td><td>${c.ext}</td></tr><tr><td>Subtasks in sync</td><td colspan="2">${c.subsOk}/${c.subs}</td></tr><tr><td>Status changes / hr</td><td colspan="2">${c.flips}</td></tr><tr><td>In current status</td><td colspan="2">${Math.round((Date.now()-c.since)/H)}h</td></tr></table></div>
+<div><h2>Root cause</h2>${d.length?"<ul>"+d.map(x=>`<li>${P(x.sev,x.sev)} ${x.t} → <b>${x.fix}</b></li>`).join("")+"</ul>":P("low","Healthy")}</div></div>
+${d.length?`<h2 style="margin-top:12px">Preview of fix</h2><table><tr><th>Field</th><th>Before</th><th>After</th></tr>${["status","ext","subsOk","flips"].filter(k=>c[k]!=p[k]).map(k=>`<tr><td>${k}</td><td>${c[k]}</td><td><b>${p[k]}</b></td></tr>`).join("")}</table><button onclick="applyFix('${c.id}');snap();route()">APPLY FIX</button>`:""} <button class="ghost" onclick="openM(noteForm('${c.id}'))">Add note</button>
+<h2 style="margin-top:14px">Notes & history</h2>${c.notes.map(n=>`<div class="muted">${esc(n)}</div>`).join("")||"<p class='muted'>No notes yet.</p>"}</div>`};
+function noteForm(id){return`<h2>Note on ${id}</h2><textarea id="nt" style="min-height:80px"></textarea><button onclick="addNote('${id}')">Save note</button> <button class="ghost" onclick="closeM()">Cancel</button>`}
+function addNote(id){const v=$("nt").value.trim();if(v.length<3)return toast("Note is too short");S.cards.find(c=>c.id==id).notes.unshift(`${new Date().toLocaleTimeString()} · ${S.user}: ${v}`);closeM();route()}
+V.recovery=()=>{const iss=S.cards.filter(c=>diag(c).length);S.pick=S.pick||{};return`<div class="card"><h2>Recovery tools</h2><p class="muted">Validate → Preview → Apply. Select cards for a bulk fix, or run Full Auto-Fix.</p>
+<table><tr><th><input type="checkbox" style="width:auto" onchange="${iss.map(c=>`S.pick['${c.id}']=this.checked`).join(";")};route()"></th><th>Card</th><th>Planned fixes</th></tr>${iss.map(c=>`<tr><td><input type="checkbox" style="width:auto" ${S.pick[c.id]?"checked":""} onchange="S.pick['${c.id}']=this.checked;route()"></td><td>${c.id} · ${esc(c.name)}</td><td>${diag(c).map(x=>x.fix).join(", ")}</td></tr>`).join("")||"<tr><td colspan=3 class='muted'>Nothing to recover.</td></tr>"}</table>
+<button onclick="bulk(false)">APPLY TO SELECTED</button> <button class="ghost" onclick="bulk(true)">FULL AUTO-FIX ALL</button></div>`};
+function bulk(all){const ids=S.cards.filter(c=>diag(c).length&&(all||S.pick[c.id])).map(c=>c.id);if(!ids.length)return toast("Select at least one card");openM(`<h2>Confirm recovery</h2><p>Apply fixes to <b>${ids.length}</b> card(s)?</p><p class="muted">${ids.join(", ")}</p><button onclick="const n=[${ids.map(i=>`'${i}'`).join(",")}].reduce((a,i)=>a+applyFix(i,true),0);S.pick={};snap();closeM();toast('✅ '+n+' issue(s) fixed');route()">Apply</button> <button class="ghost" onclick="closeM()">Cancel</button>`)}
+V.incidents=()=>`<div class="card"><h2>Incidents timeline</h2>${S.incidents.slice().sort((a,b)=>b.t-a.t).map(i=>`<div style="border-left:3px solid ${i.sev=="high"?"#C0392B":"#C27C0E"};padding:6px 12px;margin:10px 0"><b>${esc(i.title)}</b> ${P(i.status=="resolved"?"low":"high",i.status)} <span class="muted">${new Date(i.t).toLocaleDateString()}</span><br><span class="muted">Cause:</span> ${esc(i.cause)}<br><span class="muted">Fix:</span> ${esc(i.fix)||"—"} ${i.status=="open"?`<button class="ghost" style="margin:0 0 0 8px;padding:3px 10px" onclick="resolveInc(${i.id})">Resolve</button>`:""}</div>`).join("")}<button onclick="openM(incForm())">+ Log incident</button></div>`;
+function incForm(){return`<h2>Log incident</h2><label>Title</label><input id="iT"><label>Severity</label><select id="iS"><option>high</option><option>medium</option></select><label>Suspected cause</label><textarea id="iC" style="min-height:60px"></textarea><button onclick="addInc()">Log</button> <button class="ghost" onclick="closeM()">Cancel</button>`}
+function addInc(){const t=$("iT").value.trim();if(t.length<5)return toast("Title must be at least 5 characters");S.incidents.push({id:Date.now(),t:Date.now(),title:t,sev:$("iS").value,cause:$("iC").value,fix:"",status:"open"});L("🚨 Incident logged: "+t);closeM();route()}
+function resolveInc(id){const fix=prompt("What fixed it?");if(!fix)return;const i=S.incidents.find(x=>x.id==id);i.status="resolved";i.fix=fix;L("✅ Incident resolved: "+i.title);route()}
+V.trends=()=>{const t=S.trend,W=560,Hh=200,X=i=>30+i*(W-50)/Math.max(t.length-1,1),Y=v=>Hh-20-v/100*(Hh-40);
+return`<div class="card"><h2>Health score trend</h2><svg viewBox="0 0 ${W} ${Hh}" width="100%">${[25,50,75,100].map(v=>`<line x1="30" x2="${W-20}" y1="${Y(v)}" y2="${Y(v)}" stroke="currentColor" opacity=".12"/><text x="4" y="${Y(v)+4}" font-size="10" fill="currentColor" opacity=".6">${v}</text>`).join("")}
+<polyline fill="none" stroke="#1D4C93" stroke-width="3" points="${t.map((v,i)=>X(i)+","+Y(v)).join(" ")}"/>${t.map((v,i)=>`<circle cx="${X(i)}" cy="${Y(v)}" r="3.5" fill="#89CDE7"><title>${v}%</title></circle>`).join("")}</svg>
+<div class="kpi"><div><b>${t.at(-1)}%</b>current</div><div><b>${Math.round(t.reduce((a,b)=>a+b,0)/t.length)}%</b>average</div><div><b>${Math.min(...t)}%</b>lowest</div></div><p class="muted">A point is recorded after every fix or incident.</p></div>
+<div class="card" style="margin-top:16px"><h2>Issues by team</h2><table><tr><th>Team</th><th>Cards</th><th>With issues</th></tr>${[...new Set(S.cards.map(c=>c.team))].map(tm=>`<tr><td>${tm}</td><td>${S.cards.filter(c=>c.team==tm).length}</td><td>${S.cards.filter(c=>c.team==tm&&diag(c).length).length}</td></tr>`).join("")}</table></div>`};
+V.settings=()=>`<div class="card"><h2>Diagnostics & settings</h2><div class="row"><div><label>Stuck threshold (hours)</label><input type="number" id="sH" value="${S.cfg.stuckH}"></div><div><label>Flapping threshold (changes/hr)</label><input type="number" id="sF" value="${S.cfg.flipN}"></div></div>
+<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="sA" style="width:auto" ${S.cfg.autoHeal?"checked":""}> Autopilot: auto-fix new incidents</label><button onclick="saveCfg()">SAVE</button>
+<h2 style="margin-top:16px">Diagnostics</h2><ul><li>Watchdog last run: ${new Date().toLocaleTimeString()} ${P("low","ok")}</li><li>Platform webhook auth: ${P("low","service account")}</li><li>Data as of: ${new Date().toLocaleString()}</li></ul></div>
+<div class="card" style="margin-top:16px"><h2>Activity</h2>${S.log.slice(0,30).map(l=>`<div style="padding:5px 0;border-bottom:1px solid var(--line)"><span class="muted">${l.t}</span> · ${esc(l.m)}</div>`).join("")||"<p class='muted'>No activity yet.</p>"}</div>`;
+function saveCfg(){const h=+$("sH").value,f=+$("sF").value;if(!(h>=1&&h<=168)||!(f>=2&&f<=20))return toast("⛔ Stuck 1–168h, flapping 2–20");S.cfg={stuckH:h,flipN:f,autoHeal:$("sA").checked};L("⚙️ Thresholds updated");toast("Settings saved");route()}
+function badge(r){const n=S.cards.filter(c=>diag(c).length).length;return r=="action"?n||"":r=="incidents"?S.incidents.filter(i=>i.status=="open").length||"":""}
+
+
+const $=i=>document.getElementById(i);const esc=s=>String(s??"").replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
+const KEY="ohdDemo";let S;try{S=JSON.parse(localStorage.getItem(KEY))||SEED()}catch(e){S=SEED()}if(!S.log)S.log=[];
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function toast(m){const t=$("toast");t.innerHTML=m;t.classList.add("show");clearTimeout(t._);t._=setTimeout(()=>t.classList.remove("show"),3000)}
+function L(m){S.log.unshift({t:new Date().toLocaleString("en-US",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}),m});if(S.log.length>200)S.log.length=200}
+function openM(h){$("mbody").innerHTML=h;$("modal").classList.add("show")}function closeM(){$("modal").classList.remove("show")}
+function go(r){location.hash="#/"+r}
+function route(){const r=(location.hash.replace("#/","").split("?")[0]||Object.keys(V)[0]);document.querySelectorAll(".side a").forEach(a=>a.classList.toggle("on",a.dataset.r==r));
+ try{$("view").innerHTML=(V[r]||V[Object.keys(V)[0]])()}catch(e){console.error(e);$("view").innerHTML='<div class="card"><h2>Something went wrong</h2><p class="muted">'+esc(e.message)+'</p></div>'}
+ document.querySelectorAll("[data-b]").forEach(b=>{const v=typeof badge=="function"?badge(b.dataset.b):"";b.textContent=v||"";b.style.display=v?"":"none"});
+ if(typeof onRoute=="function")onRoute(r);save()}
+function resetAll(){S=SEED();S.log=S.log||[];save();toast("Demo data reset");route()}
+function toggleTheme(){const h=document.documentElement,n=h.dataset.theme=="dark"?"light":"dark";h.dataset.theme=n;try{localStorage.setItem("demoTheme",n)}catch(e){}$("themeBtn").textContent=n=="dark"?"☀️ Light":"🌙 Dark"}
+try{const t=localStorage.getItem("demoTheme")||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.dataset.theme=t;$("themeBtn").textContent=t=="dark"?"☀️ Light":"🌙 Dark"}catch(e){}
+addEventListener("hashchange",route);addEventListener("keydown",e=>{if(e.key=="Escape")closeM()});route();
+
+</script></body></html>
